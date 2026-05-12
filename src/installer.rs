@@ -94,7 +94,71 @@ pub fn install_one(
     Ok(format!("Installed {}@{}", package_name, latest))
 }
 
-/// Write a kelpy.lock file with pinned versions.
+/// Update all installed packages to the latest available version in the registry.
+/// Removes the old installed copy and reinstalls the latest.
+pub fn update_all(project_dir: &Path, registry: &Registry) -> Result<Vec<String>, String> {
+    let toml_path = project_dir.join("kelpy.toml");
+    if !toml_path.exists() {
+        return Err("No kelpy.toml found in current directory".to_string());
+    }
+    let manifest = manifest::load(&toml_path)?;
+    let packages = registry.list_packages()?;
+
+    let libs_dir = project_dir.join("libs");
+    fs::create_dir_all(&libs_dir)
+        .map_err(|e| format!("Could not create libs/: {}", e))?;
+
+    let mut updated = Vec::new();
+
+    for (dep_name, current_version) in &manifest.dependencies {
+        let versions = match packages.get(dep_name) {
+            Some(v) => v,
+            None => continue, // Not in registry — skip
+        };
+        if versions.is_empty() {
+            continue;
+        }
+        let latest = versions.last().unwrap();
+        if latest == current_version {
+            continue; // Already up to date
+        }
+
+        // Remove old
+        let dest = libs_dir.join(dep_name);
+        if dest.exists() {
+            fs::remove_dir_all(&dest)
+                .map_err(|e| format!("Could not remove old '{}': {}", dep_name, e))?;
+        }
+
+        // Install latest
+        let src = registry.package_path(dep_name, latest);
+        if src.exists() {
+            copy_dir_recursive(&src, &dest)?;
+            updated.push(format!("{}: {} → {}", dep_name, current_version, latest));
+        }
+    }
+
+    // Update kelpy.toml with new versions
+    if !updated.is_empty() {
+        let mut manifest = manifest::load(&toml_path)?;
+        for msg in &updated {
+            // msg is "name: old → new"; extract name and new version
+            let parts: Vec<&str> = msg.splitn(2, ':').collect();
+            if parts.len() == 2 {
+                let name = parts[0].trim();
+                let version_part = parts[1].trim();
+                let new_ver = version_part.split('→').last().unwrap_or("").trim();
+                manifest.dependencies.insert(name.to_string(), new_ver.to_string());
+            }
+        }
+        fs::write(&toml_path, manifest::serialize(&manifest))
+            .map_err(|e| format!("Could not update kelpy.toml: {}", e))?;
+    }
+
+    Ok(updated)
+}
+
+
 fn write_lock_file(project_dir: &Path, deps: &[resolver::ResolvedDep]) -> Result<(), String> {
     let lock_path = project_dir.join("kelpy.lock");
     let mut content = String::new();

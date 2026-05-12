@@ -10,9 +10,11 @@
 ///   - Resolve dependencies (topological sort)
 ///   - Install packages (local file-based registry for now)
 ///   - Publish packages
+///   - Update packages
 ///   - Lock file generation
 
 pub mod manifest;
 pub mod registry;
 pub mod resolver;
 pub mod installer;
+pub mod publisher;
