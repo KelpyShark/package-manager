@@ -221,7 +221,7 @@ mod tests {
         fs::create_dir_all(proj_dir.join("src")).unwrap();
         fs::write(
             proj_dir.join("kelpy.toml"),
-            "[package]\nname = \"my_project\"\nversion = \"0.1.0\"\ndescription = \"\"\n\n[dependencies]\nmy_lib = \"1.0.0\"\n",
+            "[package]\nname = \"my_project\"\nversion = \"0.2.0\"\ndescription = \"\"\n\n[dependencies]\nmy_lib = \"1.0.0\"\n",
         ).unwrap();
 
         // Install
@@ -260,7 +260,7 @@ mod tests {
         fs::create_dir_all(proj_dir.join("src")).unwrap();
         fs::write(
             proj_dir.join("kelpy.toml"),
-            "[package]\nname = \"proj\"\nversion = \"0.1.0\"\ndescription = \"\"\n\n[dependencies]\n",
+            "[package]\nname = \"proj\"\nversion = \"0.2.0\"\ndescription = \"\"\n\n[dependencies]\n",
         ).unwrap();
 
         // Install one
